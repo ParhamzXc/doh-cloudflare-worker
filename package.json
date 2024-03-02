@@ -8,8 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier --write '**/*.{js,css,json,md}'"
   },
-  "author": "tina-hello",
-  "license": "0BSD",
+  "author": "ParhamzXc",
+  "license": "MIT",
   "devDependencies": {
     "prettier": "^1.18.2"
   }

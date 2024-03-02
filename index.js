@@ -1,45 +1,52 @@
-// SPDX-License-Identifier: 0BSD
-const providers = [
-				   "https://freedns.controld.com/x-oisd",
-				   "https://sky.rethinkdns.com/1:IAAgAA==",
-				   "https://blitz.ahadns.com/1:1"]
-const doh = providers[Math.random() * providers.length | 0] 
+addEventListener('fetch', function(event) {
+    const { request } = event
+    const response = handleRequest(request)
+    event.respondWith(response)
+})
+
+// request path. Please modify this path to prevent everyone from using this worker.
+const endpointPath = '/zxc';
+
+// you can replace below server with any other DoH servers.
+const doh = 'https://dns.nextdns.io/82b849'
+
+// NOTE: below server is in JSON format. For example Google DoH JSON is https://dns.google/resolve (it's not always dns-query).
+const dohjson = 'https://dns.nextdns.io/82b849/resolve'
 
 const contype = 'application/dns-message'
-
-const r404 = new Response(null, {status: 404});
-
-// developers.cloudflare.com/workers/runtime-apis/fetch-event/#syntax-module-worker
-export default {
-    async fetch(r, env, ctx) {
-        return handleRequest(r);
-    },
-};
+const jstontype = 'application/dns-json'
 
 async function handleRequest(request) {
-    // when res is a Promise<Response>, it reduces billed wall-time
-    // blog.cloudflare.com/workers-optimization-reduces-your-bill
-    let res = r404;
+    const clientUrl = new URL(request.url);
     const { method, headers, url } = request
     const searchParams = new URL(url).searchParams
-    if (method == 'GET' && searchParams.has('dns')) {
-        res = fetch(doh + '?dns=' + searchParams.get('dns'), {
+    if (clientUrl.pathname != endpointPath) {
+        return new Response('Not Found. HTTP 404.', { status: 404 });
+    } else if (method == 'GET' && searchParams.has('dns')) {
+        return await fetch(doh + '?dns=' + searchParams.get('dns'), {
             method: 'GET',
             headers: {
                 'Accept': contype,
             }
         });
-    } else if (method === 'POST' && headers.get('content-type') === contype) {
-        // streaming out the request body is optimal than awaiting on it
-        const rostream = request.body;
-        res = fetch(doh, {
+    } else if (method == 'POST' && headers.get('content-type') == contype) {
+        return await fetch(doh, {
             method: 'POST',
             headers: {
                 'Accept': contype,
                 'Content-Type': contype,
             },
-            body: rostream,
+            body: await request.arrayBuffer()
         });
+    } else if (method == 'GET' && headers.get('Accept') == jstontype) {
+        const search = new URL(url).search
+         return await fetch(dohjson + search, {
+            method: 'GET',
+            headers: {
+                'Accept': jstontype,
+            }
+        });
+    } else {
+        return new Response("Not Found. HTTP 404.", {status: 404})
     }
-    return res;
 }
